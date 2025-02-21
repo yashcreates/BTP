@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Analysis Results</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body
+    class="bg-gradient-to-br from-white to-gray-50 min-h-screen flex items-center justify-center"
+  >
+    <div class="w-[800px] bg-white rounded-2xl shadow-xl p-10">
+      <h1 class="text-4xl font-bold mb-8 text-center">Analysis Results</h1>
+
+      {% if result.error %}
+      <p class="text-center text-red-600">{{ result.error }}</p>
+      {% else %} {% if result.expert %}
+      <div
+        class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-8 mb-10"
+      >
+        <h2 class="text-3xl font-bold mb-6">Matched Expert</h2>
+        <div class="bg-white rounded-xl p-8 shadow-lg">
+          <h3 class="text-2xl font-bold mb-4">{{ result.expert.Name }}</h3>
+          <div class="flex flex-wrap gap-3 mb-4">
+            {% for skill in result.expert['Matching Skills'][:4] %}
+            <span
+              class="bg-gradient-to-r from-blue-100 to-blue-200 px-4 py-2 rounded-full text-sm font-medium"
+              >{{ skill }}</span
+            >
+            {% endfor %}
+          </div>
+          <div class="mb-4 p-4 bg-blue-50 rounded-xl">
+            <span class="font-bold text-lg">Similarity Score:</span>
+            <span class="ml-2 text-lg text-blue-700"
+              >{{ result.expert['Combined Similarity Score'] | round(2) }}</span
+            >
+          </div>
+          <p class="text-gray-600 text-lg leading-relaxed">
+            {{ result.expert['Detailed Explanation'] }}
+          </p>
+        </div>
+      </div>
+      {% else %}
+      <p class="text-center text-gray-600">
+        No expert found for the given prompt.
+      </p>
+      {% endif %}
+
+      <div
+        class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-8 mb-10"
+      >
+        <h2 class="text-3xl font-bold mb-6">Related Resources</h2>
+        <div class="mb-6">
+          <label for="resource-type" class="text-lg font-semibold mr-2"
+            >Select Resource Type:</label
+          >
+          <select
+            id="resource-type"
+            class="p-2 border-2 rounded-lg focus:ring-4 focus:ring-blue-300 focus:border-blue-500 transition-all duration-300"
+          >
+            <option value="patents">Patents</option>
+            <option value="papers">Research Papers</option>
+          </select>
+        </div>
+
+        <!-- Patents Section -->
+        <div id="patents" class="resource-section">
+          {% for patent in result.patent_results %}
+          <div class="bg-white rounded-xl p-8 shadow-lg mb-6">
+            <h3 class="text-2xl font-bold mb-4">{{ patent.title }}</h3>
+            <div class="grid grid-cols-2 gap-6 mb-6">
+              <div class="p-4 bg-gray-50 rounded-xl">
+                <span class="font-bold text-lg block mb-2">Applicants</span>
+                <p class="text-gray-700">{{ patent.assignee or 'N/A' }}</p>
+              </div>
+              <div class="p-4 bg-gray-50 rounded-xl">
+                <span class="font-bold text-lg block mb-2">Patent Number</span>
+                <p class="text-gray-700">
+                  {{ patent.publication_number or 'N/A' }}
+                </p>
+              </div>
+              <div class="p-4 bg-gray-50 rounded-xl">
+                <span class="font-bold text-lg block mb-2">Filing Date</span>
+                <p class="text-gray-700">{{ patent.filing_date or 'N/A' }}</p>
+              </div>
+              <div class="p-4 bg-gray-50 rounded-xl">
+                <span class="font-bold text-lg block mb-2"
+                  >Publication Year</span
+                >
+                <p class="text-gray-700">
+                  {{ patent.publication_date[:4] if patent.publication_date else
+                  'N/A' }}
+                </p>
+              </div>
+            </div>
+            <a
+              href="{{ patent.patent_link }}"
+              class="inline-flex items-center text-blue-600 hover:text-blue-800 font-semibold text-lg"
+              target="_blank"
+              rel="noopener noreferrer"
+              >View Patent</a
+            >
+          </div>
+          {% else %}
+          <p class="text-center text-gray-600">
+            No patents found for the given prompt.
+          </p>
+          {% endfor %}
+        </div>
+
+        <!-- Research Papers Section -->
+        <div id="papers" class="resource-section hidden">
+          {% for paper in result.paper_results %}
+          <div class="bg-white rounded-xl p-8 shadow-lg mb-6">
+            <h3 class="text-2xl font-bold mb-4">{{ paper.title }}</h3>
+            <div class="grid grid-cols-2 gap-6 mb-6">
+              <div class="p-4 bg-gray-50 rounded-xl">
+                <span class="font-bold text-lg block mb-2">Authors</span>
+                <p class="text-gray-700">
+                  {% if paper.publication_info.authors %} {{
+                  paper.publication_info.authors | map(attribute='name') |
+                  join(', ') }} {% else %} Unknown {% endif %}
+                </p>
+              </div>
+              <div class="p-4 bg-gray-50 rounded-xl">
+                <span class="font-bold text-lg block mb-2"
+                  >Publication Year</span
+                >
+                <p class="text-gray-700">
+                  {{ paper.publication_info.summary.split(' - ')[0] if
+                  paper.publication_info.summary else 'N/A' }}
+                </p>
+              </div>
+            </div>
+            <a
+              href="{{ paper.link }}"
+              class="inline-flex items-center text-blue-600 hover:text-blue-800 font-semibold text-lg"
+              target="_blank"
+              rel="noopener noreferrer"
+              >View Paper</a
+            >
+          </div>
+          {% else %}
+          <p class="text-center text-gray-600">
+            No research papers found for the given prompt.
+          </p>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% endif %}
+    </div>
+
+    <script>
+      // Toggle between patents and papers
+      document
+        .getElementById("resource-type")
+        .addEventListener("change", function () {
+          const patentsSection = document.getElementById("patents");
+          const papersSection = document.getElementById("papers");
+
+          if (this.value === "patents") {
+            patentsSection.classList.remove("hidden");
+            papersSection.classList.add("hidden");
+          } else {
+            patentsSection.classList.add("hidden");
+            papersSection.classList.remove("hidden");
+          }
+        });
+    </script>
+  </body>
+</html>
