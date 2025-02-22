@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request
+from flask_socketio import SocketIO, emit, join_room
 import requests
 import os
 import pandas as pd
@@ -8,21 +9,30 @@ from sklearn.metrics.pairwise import cosine_similarity
 import torch
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 from serpapi import GoogleSearch
+from dotenv import load_dotenv
 
-# Initialize Flask app
+# Load environment variables
+load_dotenv()
+
+# Initialize Flask app with SocketIO
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your_secret_key_here'  # Replace with a secure key
+socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Load AI models
+# Load AI models (unchanged)
 sbert_model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
 t5_tokenizer = T5Tokenizer.from_pretrained("t5-small")
 t5_model = T5ForConditionalGeneration.from_pretrained("t5-small")
 
-# Load data
+# Load data (unchanged)
 corpus_data = pd.read_csv('./summarized_corpus.csv')
 with open('./adjacency_list.json', 'r') as file:
     adjacency_list = json.load(file)
 
-# Skill extraction using Gemini API
+# Track online users
+online_users = {}  # sid: username
+
+# Skill extraction using Gemini API (unchanged)
 def extract_skills_from_prompt(prompt):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={os.getenv('GEMINI_API_KEY')}"
     headers = {"Content-Type": "application/json"}
@@ -34,7 +44,7 @@ def extract_skills_from_prompt(prompt):
     print(f"Gemini API Error: {response.status_code}")
     return ""
 
-# Generate detailed explanation using Gemini API
+# Generate detailed explanation using Gemini API (unchanged)
 def generate_why_and_how_explanation_gemini(person, skill, query):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={os.getenv('GEMINI_API_KEY')}"
     headers = {"Content-Type": "application/json"}
@@ -53,11 +63,11 @@ def generate_why_and_how_explanation_gemini(person, skill, query):
     print(f"Gemini API Error: {response.status_code}")
     return "Detailed explanation unavailable due to API error."
 
-# SentenceTransformer embedding
+# SentenceTransformer embedding (unchanged)
 def get_sbert_embedding(text):
     return sbert_model.encode(text)
 
-# T5 semantic similarity
+# T5 semantic similarity (unchanged)
 def t5_semantic_similarity(query, document):
     input_text = f"mnli premise: {query} hypothesis: {document}"
     inputs = t5_tokenizer(input_text, return_tensors="pt", max_length=512, truncation=True)
@@ -70,7 +80,7 @@ def t5_semantic_similarity(query, document):
         return 0.5
     return 0.0
 
-# Find relevant people using SBERT and T5
+# Find relevant people using SBERT and T5 (unchanged)
 def find_relevant_people_sbert_t5_v3(extracted_text, corpus_data, adjacency_list, query):
     skills = extracted_text.lower().split()
     skills = list(set(skills))
@@ -94,7 +104,6 @@ def find_relevant_people_sbert_t5_v3(extracted_text, corpus_data, adjacency_list
                 'T5 Semantic Similarity': t5_score,
                 'Combined Similarity Score': combined_score,
                 'Why They Can Help': f"{row['LinkedIn Name']} has expertise in {', '.join(skills)}.",
-                
             }
             detailed_explanation = generate_why_and_how_explanation_gemini(person_info, ", ".join(skills), query)
             person_info['Detailed Explanation'] = detailed_explanation
@@ -102,7 +111,7 @@ def find_relevant_people_sbert_t5_v3(extracted_text, corpus_data, adjacency_list
 
     return sorted(relevant_people, key=lambda x: x['Combined Similarity Score'], reverse=True)[:3]
 
-# Search academic papers using SerpAPI
+# Search academic papers using SerpAPI (unchanged)
 def get_scholar_results(query):
     params = {
         "engine": "google_scholar",
@@ -113,7 +122,7 @@ def get_scholar_results(query):
     search = GoogleSearch(params)
     return search.get_dict().get('organic_results', [])
 
-# Search patents using SerpAPI
+# Search patents using SerpAPI (unchanged)
 def get_patent_results_serpapi(query):
     params = {
         "engine": "google_patents",
@@ -123,7 +132,7 @@ def get_patent_results_serpapi(query):
     search = GoogleSearch(params)
     return search.get_dict().get("organic_results", [])
 
-# Process user input
+# Process user input (unchanged)
 def process_input(prompt):
     extracted_text = extract_skills_from_prompt(prompt)
     if not extracted_text:
@@ -139,7 +148,7 @@ def process_input(prompt):
         "patent_results": patent_results
     }
 
-# Flask routes
+# Flask routes (unchanged)
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -150,5 +159,64 @@ def analyze():
     result = process_input(prompt)
     return render_template('result.html', result=result)
 
+# SocketIO events for chat
+@socketio.on('join')
+def handle_join(data):
+    username = data['username']
+    online_users[request.sid] = username
+    join_room('public')
+    emit('online_users', list(online_users.values()), broadcast=True)
+    print(f"User {username} joined with SID {request.sid}")
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    username = online_users.pop(request.sid, None)
+    if username:
+        emit('online_users', list(online_users.values()), broadcast=True)
+        print(f"User {username} disconnected")
+
+@socketio.on('request_private_chat')
+def handle_request_private_chat(data):
+    target_username = data['target']
+    requester_username = online_users.get(request.sid)
+    if requester_username and target_username in online_users.values():
+        for sid, user in online_users.items():
+            if user == target_username:
+                emit('private_chat_request', {'from': requester_username, 'to': target_username}, room=sid)
+                print(f"Chat request from {requester_username} to {target_username} sent to SID {sid}")
+                break
+    else:
+        print(f"Failed to send request: {requester_username} or {target_username} not found")
+
+@socketio.on('accept_private_chat')
+def handle_accept_private_chat(data):
+    requester_username = data['requester']
+    acceptor_username = online_users.get(request.sid)
+    if acceptor_username and requester_username in online_users.values():
+        room_name = '_'.join(sorted([requester_username, acceptor_username]))
+        join_room(room_name, sid=request.sid)
+        print(f"{acceptor_username} joined room {room_name} with SID {request.sid}")
+        for sid, user in online_users.items():
+            if user == requester_username:
+                join_room(room_name, sid=sid)
+                emit('private_chat_started', {'room': room_name, 'partner': acceptor_username}, room=sid)
+                print(f"{requester_username} joined room {room_name} with SID {sid}")
+                emit('private_chat_started', {'room': room_name, 'partner': requester_username}, room=request.sid)
+                break
+    else:
+        print(f"Failed to start private chat: {requester_username} or {acceptor_username} not found")
+
+@socketio.on('send_message')
+def handle_send_message(data):
+    room = data['room']
+    message = data['message']
+    username = online_users.get(request.sid)
+    if username and message:
+        formatted_message = f"{username}: {message}"
+        emit('chat_message', {'room': room, 'message': formatted_message}, room=room)
+        print(f"Message '{formatted_message}' sent to room {room}")
+    else:
+        print(f"Failed to send message: User {username} or message {message} invalid")
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    socketio.run(app, host='0.0.0.0', port=5080, debug=True)
