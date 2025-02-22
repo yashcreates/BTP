@@ -36,11 +36,16 @@ online_users = {}  # sid: username
 def extract_skills_from_prompt(prompt):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={os.getenv('GEMINI_API_KEY')}"
     headers = {"Content-Type": "application/json"}
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+    
+    refined_prompt = f"I need a guy who can help me in {prompt}. Give me in a single paragraph the environmental, technical, and non-tech skills the person should have and the preferred years of experience. Only use nouns."
+    
+    payload = {"contents": [{"parts": [{"text": refined_prompt}]}]}
     response = requests.post(url, json=payload, headers=headers)
+    
     if response.status_code == 200:
         result = response.json()
         return result['candidates'][0]['content']['parts'][0]['text']
+    
     print(f"Gemini API Error: {response.status_code}")
     return ""
 
@@ -53,7 +58,7 @@ def generate_why_and_how_explanation_gemini(person, skill, query):
         f"To solve the problem: '{query}', why is this person with his company and resources best suited based on the given info, and how can they help, which part precisely I can ask them help for?\n"
         f"Person's Details (or his company's details): {corpus_text}\n"
         f"Speciality in: {skill}\n"
-        f"Provide a 5-6 line explanation."
+        f"Provide a 5-6 line explanation and it should only be positive."
     )
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
     response = requests.post(url, json=payload, headers=headers)
@@ -93,7 +98,7 @@ def find_relevant_people_sbert_t5_v3(extracted_text, corpus_data, adjacency_list
         corpus_embedding = get_sbert_embedding(corpus_text)
         cosine_score = cosine_similarity([avg_skill_embedding], [corpus_embedding])[0][0]
         t5_score = t5_semantic_similarity(" ".join(skills), corpus_text)
-        combined_score = (0.6 * cosine_score) + (0.4 * t5_score) + 0.3
+        combined_score = (0.7 * cosine_score) + (0.3 * t5_score) + 0.3
 
         if combined_score > 0.01:
             person_info = {
