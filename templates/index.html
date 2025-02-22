@@ -8,10 +8,18 @@
       href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
       rel="stylesheet"
     />
+    <!-- Animate.css for animations -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+    />
+    <!-- Socket.IO client library -->
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
   </head>
   <body
     class="bg-gradient-to-br from-white to-gray-50 min-h-screen flex items-center justify-center"
   >
+    <!-- Main Content (unchanged) -->
     <div class="w-[800px] bg-white rounded-2xl shadow-xl p-10">
       <h1 class="text-4xl font-bold mb-8 text-center">Project Analysis Hub</h1>
       <form action="/analyze" method="post">
@@ -30,5 +38,255 @@
         </button>
       </form>
     </div>
+
+    <!-- Chat Widget -->
+    <div
+      id="chat-widget"
+      class="fixed bottom-5 right-5 w-80 bg-white rounded-lg shadow-2xl transition-all duration-300 ease-in-out"
+    >
+      <!-- Chat Header -->
+      <div
+        id="chat-toggle"
+        class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-t-lg cursor-pointer flex justify-between items-center"
+      >
+        <span class="font-semibold">Environmental Chat</span>
+        <span id="chat-toggle-icon">▼</span>
+      </div>
+      <!-- Chat Body (Hidden by Default) -->
+      <div id="chat-body" class="hidden">
+        <div id="chat-select" class="p-2">
+          <select
+            id="room-select"
+            class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 transition-all duration-300"
+          >
+            <option value="public">Public Chat</option>
+          </select>
+        </div>
+        <div
+          id="chat-messages"
+          class="h-64 overflow-y-auto p-4 bg-gray-50 border-b border-gray-200 text-sm"
+        ></div>
+        <div class="p-4">
+          <input
+            type="text"
+            id="chat-input"
+            placeholder="Type a message..."
+            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+            disabled
+          />
+          <button
+            id="chat-send"
+            class="mt-2 w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all duration-300 font-semibold"
+            disabled
+          >
+            Send
+          </button>
+          <button
+            id="change-name"
+            class="mt-2 w-full bg-gradient-to-r from-gray-500 to-gray-600 text-white px-4 py-1 rounded-lg hover:bg-gray-700 transition-all duration-300 text-sm"
+          >
+            Change Name
+          </button>
+        </div>
+        <div id="online-users" class="p-2">
+          <h3 class="font-semibold text-sm">Online Users</h3>
+          <ul id="user-list" class="list-disc pl-5 text-sm"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Name Input Modal -->
+    <div
+      id="name-modal"
+      class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center hidden"
+    >
+      <div
+        class="bg-white p-6 rounded-lg shadow-xl w-96 animate__animated animate__zoomIn"
+      >
+        <h2 class="text-xl font-semibold mb-4">Enter Your Chat Name</h2>
+        <input
+          type="text"
+          id="name-input"
+          placeholder="Your name..."
+          class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-300"
+        />
+        <button
+          id="name-submit"
+          class="mt-4 w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all duration-300 font-semibold"
+        >
+          Join Chat
+        </button>
+      </div>
+    </div>
+
+    <!-- JavaScript for Chat Functionality -->
+    <script>
+      const socket = io();
+      let username = localStorage.getItem("chatUsername");
+      let currentRoom = "public";
+      const messages = { public: [] };
+      const privateChats = {}; // partner: room
+
+      socket.on("connect", () => {
+        console.log("Connected to chat server");
+        if (username) {
+          socket.emit("join", { username: username });
+          document.getElementById("chat-input").disabled = false;
+          document.getElementById("chat-send").disabled = false;
+        }
+      });
+
+      socket.on("online_users", (users) => {
+        const userList = document.getElementById("user-list");
+        userList.innerHTML = "";
+        users.forEach((user) => {
+          if (user !== username) {
+            const li = document.createElement("li");
+            li.textContent = user;
+            const button = document.createElement("button");
+            button.textContent = "Chat";
+            button.classList.add("ml-2", "text-blue-500", "hover:underline");
+            button.addEventListener("click", () => {
+              socket.emit("request_private_chat", { target: user });
+              console.log(`Requested private chat with ${user}`);
+            });
+            li.appendChild(button);
+            userList.appendChild(li);
+          }
+        });
+        console.log("Online users updated:", users);
+      });
+
+      socket.on("private_chat_request", (data) => {
+        const requester = data.from;
+        const to = data.to;
+        if (to === username) {
+          if (confirm(`Accept private chat request from ${requester}?`)) {
+            socket.emit("accept_private_chat", { requester: requester });
+            console.log(`Accepted private chat with ${requester}`);
+          } else {
+            console.log(`Declined private chat with ${requester}`);
+          }
+        }
+      });
+
+      socket.on("private_chat_started", (data) => {
+        const room = data.room;
+        const partner = data.partner;
+        privateChats[partner] = room;
+        if (!messages[room]) messages[room] = [];
+        const select = document.getElementById("room-select");
+        const option = document.createElement("option");
+        option.value = room;
+        option.textContent = `Private with ${partner}`;
+        select.appendChild(option);
+        select.value = room; // Auto-switch to the private room
+        currentRoom = room;
+        displayMessages();
+        console.log(`Private chat started with ${partner} in room ${room}`);
+      });
+
+      socket.on("chat_message", (data) => {
+        const room = data.room;
+        const message = data.message;
+        if (!messages[room]) messages[room] = [];
+        messages[room].push(message);
+        if (room === currentRoom) {
+          displayMessages();
+        }
+        console.log(`Received message in room ${room}: ${message}`);
+      });
+
+      document.getElementById("room-select").addEventListener("change", (e) => {
+        currentRoom = e.target.value;
+        displayMessages();
+        console.log(`Switched to room ${currentRoom}`);
+      });
+
+      function displayMessages() {
+        const chatMessages = document.getElementById("chat-messages");
+        chatMessages.innerHTML = "";
+        if (messages[currentRoom]) {
+          messages[currentRoom].forEach((msg) => {
+            const div = document.createElement("div");
+            div.classList.add(
+              "mb-2",
+              "p-2",
+              "bg-blue-100",
+              "rounded-lg",
+              "animate__animated",
+              "animate__fadeInUp"
+            );
+            div.textContent = msg;
+            chatMessages.appendChild(div);
+          });
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+      }
+
+      document.getElementById("chat-send").addEventListener("click", () => {
+        const input = document.getElementById("chat-input");
+        const message = input.value.trim();
+        if (message && username) {
+          socket.emit("send_message", { room: currentRoom, message: message });
+          input.value = "";
+          console.log(`Sent message to ${currentRoom}: ${message}`);
+        }
+      });
+
+      document
+        .getElementById("chat-input")
+        .addEventListener("keypress", (e) => {
+          if (e.key === "Enter") {
+            document.getElementById("chat-send").click();
+          }
+        });
+
+      document.getElementById("chat-toggle").addEventListener("click", () => {
+        const chatBody = document.getElementById("chat-body");
+        const toggleIcon = document.getElementById("chat-toggle-icon");
+        const nameModal = document.getElementById("name-modal");
+
+        chatBody.classList.toggle("hidden");
+        if (!chatBody.classList.contains("hidden")) {
+          chatBody.classList.add("animate__animated", "animate__slideInUp");
+          toggleIcon.textContent = "▲";
+          if (!username) {
+            nameModal.classList.remove("hidden");
+          }
+        } else {
+          chatBody.classList.remove("animate__animated", "animate__slideInUp");
+          toggleIcon.textContent = "▼";
+        }
+      });
+
+      document.getElementById("name-submit").addEventListener("click", () => {
+        const nameInput = document.getElementById("name-input");
+        username = nameInput.value.trim();
+        if (username) {
+          localStorage.setItem("chatUsername", username);
+          document.getElementById("name-modal").classList.add("hidden");
+          document.getElementById("chat-input").disabled = false;
+          document.getElementById("chat-send").disabled = false;
+          socket.emit("join", { username: username });
+          console.log(`Joined chat as ${username}`);
+        } else {
+          alert("Please enter a valid name!");
+        }
+      });
+
+      document
+        .getElementById("name-input")
+        .addEventListener("keypress", (e) => {
+          if (e.key === "Enter") {
+            document.getElementById("name-submit").click();
+          }
+        });
+
+      document.getElementById("change-name").addEventListener("click", () => {
+        document.getElementById("name-modal").classList.remove("hidden");
+        document.getElementById("name-input").value = username;
+      });
+    </script>
   </body>
 </html>
