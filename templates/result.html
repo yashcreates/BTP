@@ -3,148 +3,190 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Analysis Results</title>
+    <title>Brainchain</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/result-style.css') }}">
     <link
       href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
       rel="stylesheet"
     />
   </head>
-  <body
-    class="bg-gradient-to-br from-white to-gray-50 min-h-screen flex items-center justify-center"
-  >
-    <div class="w-[800px] bg-white rounded-2xl shadow-xl p-10">
-      <h1 class="text-4xl font-bold mb-8 text-center">Analysis Results</h1>
+  <body>
+    <div class="video-background">
+      <video autoplay muted loop>
+          <source src="{{ url_for('static', filename='assets/jelly fish bg 480p 2 2.mp4') }}" type="video/mp4">
+      </video>
+    </div>
+
+    <div class="result-page">
+      <h1 class="result-h1">Analysis Results</h1>
 
       {% if result.error %}
-      <p class="text-center text-red-600">{{ result.error }}</p>
+      <p>{{ result.error }}</p>
       {% else %} {% if result.expert %}
-      <div
-        class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-8 mb-10"
-      >
-        <h2 class="text-3xl font-bold mb-6">Matched Expert</h2>
-        <div class="bg-white rounded-xl p-8 shadow-lg">
-          <h3 class="text-2xl font-bold mb-4">{{ result.expert.Name }}</h3>
-          <div class="flex flex-wrap gap-3 mb-4">
+      <div class="expert-match">
+        <h2 class="result-h2">{{ result.expert.Name }}</h2>
+        <div class="expert-data">
+          <div class="expert-skills">
+            <strong>Matching Skills: &nbsp;</strong>
             {% for skill in result.expert['Matching Skills'][:4] %}
-            <span
-              class="bg-gradient-to-r from-blue-100 to-blue-200 px-4 py-2 rounded-full text-sm font-medium"
-              >{{ skill }}</span
+            <span>{{ skill }}</span
             >
             {% endfor %}
           </div>
-          <div class="mb-4 p-4 bg-blue-50 rounded-xl">
-            <span class="font-bold text-lg">Similarity Score:</span>
-            <span class="ml-2 text-lg text-blue-700"
-              >{{ result.expert['Combined Similarity Score'] | round(2) }}</span
+          <div class="expert-score">
+            <span><strong>Score:&nbsp;</strong></span>
+            <span>{{ result.expert['Combined Similarity Score'] | round(2) }}</span
             >
           </div>
-          <p class="text-gray-600 text-lg leading-relaxed">
+          <p class="expert-expl">
             {{ result.expert['Detailed Explanation'] }}
           </p>
+
+          <!-- Find Connection Button -->
+          <button 
+            id="findConnectionBtn"
+            onclick="toggleConnectionSearch()"
+          >
+            Find Connection
+          </button>
+
+           <!-- Send Connection Request Button -->
+          <button 
+              id="requestConnectionBtn"
+              onclick="showRequestForm()"
+          >
+              Send Request
+            </button>
+          </button>
+
+          <!-- Popup Modal -->
+          <div id="requestModal">
+            <div class="requestModalContent">
+              <div class="requestConnection">
+                  <h2>Send Connection Request</h2>
+                  
+                  <label>Project Title</label>
+                  <input type="text" id="projectTitle" placeholder="Enter project title">
+                  
+                  <label>Project Description</label>
+                  <textarea id="projectDescription" placeholder="Enter project description"></textarea>
+                  
+                  <div class="request-btns">
+                      <button onclick="submitRequest()">Submit</button>
+                      <button onclick="closeRequestForm()">Cancel</button>
+                  </div>
+              </div>
+            </div>
+          </div>
+
+           <!-- Hidden Search Box & Button -->
+          <div id="connectionSearch">
+            <label for="startPerson">
+              Enter Starting Person Name :
+            </label>
+            <input 
+              type="text" 
+              id="startPerson"
+              placeholder="Enter name"
+            />
+            <button 
+              onclick="searchConnection()"
+            >
+              Search Connection
+            </button>
+
+            <!-- Connection Path Result -->
+            <div id="connectionResult"></div>
+          </div>
+
         </div>
       </div>
       {% else %}
-      <p class="text-center text-gray-600">
+      <p>
         No expert found for the given prompt.
       </p>
       {% endif %}
 
-      <div
-        class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-8 mb-10"
-      >
-        <h2 class="text-3xl font-bold mb-6">Related Resources</h2>
-        <div class="mb-6">
-          <label for="resource-type" class="text-lg font-semibold mr-2"
-            >Select Resource Type:</label
+      <div class="resources">
+        <h2>Related Resources</h2>
+        <div class="select-resource">
+          <label for="resource-type"><strong>Select Resource Type :&nbsp;&nbsp;</strong></label
           >
-          <select
-            id="resource-type"
-            class="p-2 border-2 rounded-lg focus:ring-4 focus:ring-blue-300 focus:border-blue-500 transition-all duration-300"
-          >
+          <select id="resource-type">
+            <option value="" disabled selected style="color: grey;">All</option>
             <option value="patents">Patents</option>
             <option value="papers">Research Papers</option>
           </select>
         </div>
 
         <!-- Patents Section -->
-        <div id="patents" class="resource-section">
+        <div id="patents">
           {% for patent in result.patent_results %}
-          <div class="bg-white rounded-xl p-8 shadow-lg mb-6">
-            <h3 class="text-2xl font-bold mb-4">{{ patent.title }}</h3>
-            <div class="grid grid-cols-2 gap-6 mb-6">
-              <div class="p-4 bg-gray-50 rounded-xl">
-                <span class="font-bold text-lg block mb-2">Applicants</span>
-                <p class="text-gray-700">{{ patent.assignee or 'N/A' }}</p>
-              </div>
-              <div class="p-4 bg-gray-50 rounded-xl">
-                <span class="font-bold text-lg block mb-2">Patent Number</span>
-                <p class="text-gray-700">
-                  {{ patent.publication_number or 'N/A' }}
-                </p>
-              </div>
-              <div class="p-4 bg-gray-50 rounded-xl">
-                <span class="font-bold text-lg block mb-2">Filing Date</span>
-                <p class="text-gray-700">{{ patent.filing_date or 'N/A' }}</p>
-              </div>
-              <div class="p-4 bg-gray-50 rounded-xl">
-                <span class="font-bold text-lg block mb-2"
-                  >Publication Year</span
+          <div class="patent">
+            <div class="patent-header">
+              <h3 class="result-h3"><strong>{{ patent.title }}</strong></h3>
+              <a
+                  href="{{ patent.patent_link }}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >View Patent</a
                 >
-                <p class="text-gray-700">
-                  {{ patent.publication_date[:4] if patent.publication_date else
-                  'N/A' }}
-                </p>
+            </div>
+            <div class="patent-data">
+              <div class="patent-data-top">
+                <div><strong>Applicants :&nbsp;</strong>{{ patent.assignee or 'N/A' }}</div>
+              </div>
+              <div class="patent-data-mid">
+                <div>
+                  <span><strong>Patent Number :&nbsp;</strong>{{ patent.publication_number or 'N/A' }}</span>
+                </div>
+                <div>
+                  <span><strong>Filing Date :&nbsp;</strong>{{ patent.filing_date or 'N/A' }}</span>
+                </div>
+                <div>
+                  <span><strong>Publication Year :&nbsp;</strong>{{ patent.publication_date[:4] if patent.publication_date else 'N/A' }}</span>
+                </div>
               </div>
             </div>
-            <a
-              href="{{ patent.patent_link }}"
-              class="inline-flex items-center text-blue-600 hover:text-blue-800 font-semibold text-lg"
-              target="_blank"
-              rel="noopener noreferrer"
-              >View Patent</a
-            >
           </div>
           {% else %}
-          <p class="text-center text-gray-600">
+          <p>
             No patents found for the given prompt.
           </p>
           {% endfor %}
         </div>
 
         <!-- Research Papers Section -->
-        <div id="papers" class="resource-section hidden">
+        <div id="papers">
           {% for paper in result.paper_results %}
-          <div class="bg-white rounded-xl p-8 shadow-lg mb-6">
-            <h3 class="text-2xl font-bold mb-4">{{ paper.title }}</h3>
-            <div class="grid grid-cols-2 gap-6 mb-6">
-              <div class="p-4 bg-gray-50 rounded-xl">
-                <span class="font-bold text-lg block mb-2">Authors</span>
-                <p class="text-gray-700">
+          <div class="patent">
+            <div class="patent-header">
+              <h3 class="result-h3"><strong>{{ paper.title }}</strong></h3>
+            </div>
+            <div class="patent-data">
+              <div div class="patent-data-top">
+                <div><strong>Authors :&nbsp;</strong>
                   {% if paper.publication_info.authors %} {{
                   paper.publication_info.authors | map(attribute='name') |
                   join(', ') }} {% else %} Unknown {% endif %}
-                </p>
+                </div>
               </div>
-              <div class="p-4 bg-gray-50 rounded-xl">
-                <span class="font-bold text-lg block mb-2"
-                  >Publication Year</span
-                >
-                <p class="text-gray-700">
+              <div div class="patent-data-mid">
+                <div><strong>Publication :&nbsp;</strong>
                   {{ paper.publication_info.summary.split(' - ')[0] if
                   paper.publication_info.summary else 'N/A' }}
-                </p>
+                </div>
+                <a
+                  href="{{ paper.link }}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >View Paper
+                </a>
               </div>
             </div>
-            <a
-              href="{{ paper.link }}"
-              class="inline-flex items-center text-blue-600 hover:text-blue-800 font-semibold text-lg"
-              target="_blank"
-              rel="noopener noreferrer"
-              >View Paper</a
-            >
           </div>
           {% else %}
-          <p class="text-center text-gray-600">
+          <p>
             No research papers found for the given prompt.
           </p>
           {% endfor %}
@@ -155,7 +197,9 @@
     </div>
 
     <script>
-      // Toggle between patents and papers
+      toggleConnectionSearch();
+      closeRequestForm();
+
       document
         .getElementById("resource-type")
         .addEventListener("change", function () {
@@ -170,6 +214,131 @@
             papersSection.classList.remove("hidden");
           }
         });
+
+        function toggleConnectionSearch() {
+          var searchDiv = document.getElementById("connectionSearch");
+          searchDiv.classList.toggle("hidden");
+        }
+
+        function showRequestForm() {
+            document.getElementById("requestModal").classList.remove("hidden");
+        }
+
+        function closeRequestForm() {
+            document.getElementById("requestModal").classList.add("hidden");
+        }
+
+        function submitRequest() {
+            var button = document.getElementById("requestConnectionBtn");
+            var title = document.getElementById("projectTitle").value;
+            var expertName = "{{ result.expert.Name }}";
+            var description = document.getElementById("projectDescription").value;
+
+            if (!title || !description) {
+                alert("Please fill in all fields.");
+                return;
+            }
+
+            // Dummy user data (Replace with real user data)
+            const requestData = {
+                from: localStorage.getItem("userName"),
+                to: expertName,
+                project_title: title, 
+                project_description: description
+            };
+
+            fetch("/add_request", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    button.innerHTML = "Request Sent ☑️";
+                    button.disabled = true;
+                    button.classList.remove("bg-blue-500");
+                    button.classList.add("bg-gray-500");
+                    closeRequestForm();
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        }
+
+        function searchConnection() {
+          var startPerson = document.getElementById("startPerson").value;
+          var expertName = "{{ result.expert.Name }}";
+          var resultDiv = document.getElementById("connectionResult");
+
+          if (!startPerson) {
+            resultDiv.innerHTML = "<p class='text-red-600'>Please enter a starting person name.</p>";
+            return;
+          }
+
+          fetch("/search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ start: startPerson, target: expertName })
+          })
+          .then(response => response.json())
+          .then(data => {
+            const resultDiv = document.getElementById("connectionResult");
+            resultDiv.innerHTML = ""; // Clear previous results
+
+            if (data.path) {
+              const names = data.path.split(" -> "); // Split connection path
+              let index = 0;
+
+              // Function to display connections as circles
+              function showNext() {
+                if (index < names.length) {
+                  // Create a wrapper to hold the circle + arrow
+                  const wrapper = document.createElement("div");
+                  wrapper.classList.add("flex", "items-center", "space-x-2");
+
+                  // Create a circle for each person
+                  const node = document.createElement("div");
+                  node.textContent = names[index];
+                  node.classList.add(
+                    "w-28", "h-28", "flex", "items-center", "justify-center", "p-1", "ml-1",
+                    "rounded-full", "custom-gradient", "text-white", "text-sm",
+                    "font-bold", "shadow-lg", "opacity-0", "transition-opacity", "duration-500", "text-center"
+                  );
+
+                  wrapper.appendChild(node); // Add circle to wrapper
+
+                  // Add an arrow immediately after, except for the last circle
+                  if (index < names.length - 1) {
+                    const arrow = document.createElement("img");
+                    arrow.src = "https://cdn-icons-png.flaticon.com/512/271/271228.png"; // Replace with any icon
+                    arrow.classList.add("w-6", "h-6", "opacity-75");
+
+                    wrapper.appendChild(arrow); // Add arrow to wrapper
+                  }
+
+                  resultDiv.appendChild(wrapper); // Append wrapper (circle + arrow)
+
+                  // Fade in the circle after it's in the DOM
+                  setTimeout(() => {
+                    node.classList.remove("opacity-0");
+                  }, 100);
+
+                  index++;
+                  setTimeout(showNext, 700); // Move to next node after delay
+                }
+              }
+
+              showNext(); // Start animation
+            } else {
+              resultDiv.innerHTML = `<p class='text-red-600'>${data.error}</p>`;
+            }
+          })
+          .catch(error => {
+            resultDiv.innerHTML = "<p class='text-red-600'>Error fetching connection.</p>";
+          });
+        }
     </script>
   </body>
 </html>

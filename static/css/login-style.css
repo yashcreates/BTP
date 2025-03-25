@@ -1,0 +1,76 @@
+body{
+    margin: 0;
+    padding: 0;
+}
+.video-background video{
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    object-fit: cover;
+    z-index: -1;
+    background-color: rgb(75, 75, 75);
+}
+.body{
+    /* background-image: url("../assets/Screenshot\ \(8\).png"); */
+    width: 100%;
+    height: 100vh;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-shadow: rgb(0, 0, 0) 2px 0 5px;
+    /* justify-content: center; */
+}
+.company-logo{
+    font-size: 60px;
+    font-weight: bold;
+    margin: 60px;
+}
+.login-form{
+    border: 2px solid white;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 500px;
+    height: 420px;
+    background-color: rgba(255, 255, 255, 0.15);
+}
+.login-form label{
+    width: 80%;
+    font-size: 18px;
+    text-align: start;
+}
+.login-form input{
+    width: 80%;
+    border: none;
+    padding: 10px;
+    font-size: 15px;
+    border-radius: 10px;
+    margin: 20px 0px;
+    background-color: rgba(255, 255, 255, 0.5);
+}
+.login-form h1{
+    margin: 40px;;
+}
+.footer{
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: black;
+    padding: 10px;
+}
+.login-btn{
+    cursor: pointer;
+    padding: 10px 50px;
+    font-size: 18px;
+    margin: 20px;
+    border: 1px solid white;
+    border-radius: 10px;
+    background: rgb(9,9,121);
+    background: linear-gradient(30deg, rgba(9,9,121,1) 0%, rgba(109,0,159,1) 50%);
+    color: white;
+}

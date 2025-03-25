@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brainchain</title>
+    <link rel="stylesheet" href="../static/css/login-style.css">
+    <script>
+        function handleLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('name').value;
+            const password = document.getElementById('password').value;
+            if (email) {
+                localStorage.setItem('userName', email);
+            }
+            window.location.href = "{{ url_for('index') }}";
+        }
+    </script>
+</head>
+<body>
+    <div class="video-background">
+      <video autoplay muted loop>
+          <source src="{{ url_for('static', filename='assets/jelly fish bg 480p 2 2.mp4') }}" type="video/mp4">
+      </video>
+    </div>
+    <div class="body">
+        <div class="company-logo">Brainchain</div>
+            <form onsubmit="handleLogin(event)" class="login-form">
+                <h1>Login</h1>
+                <label for="name">Username</label>
+                <input type="text" id="name" required>
+
+                <label for="password">Password</label>
+                <input type="password" id="password" required>
+
+                <button type="submit" class="login-btn">Login</button>
+            </form>
+    </div>
+</body>
+</html>

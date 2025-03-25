@@ -1,292 +1,765 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Project Analysis Hub</title>
-    <link
-      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
-      rel="stylesheet"
-    />
-    <!-- Animate.css for animations -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
-    />
-    <!-- Socket.IO client library -->
-    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
-  </head>
-  <body
-    class="bg-gradient-to-br from-white to-gray-50 min-h-screen flex items-center justify-center"
-  >
-    <!-- Main Content (unchanged) -->
-    <div class="w-[800px] bg-white rounded-2xl shadow-xl p-10">
-      <h1 class="text-4xl font-bold mb-8 text-center">Project Analysis Hub</h1>
-      <form action="/analyze" method="post">
-        <input
-          type="text"
-          name="prompt"
-          placeholder="Enter your project prompt..."
-          class="w-full p-5 border-2 rounded-2xl focus:ring-4 focus:ring-blue-300 focus:border-blue-500 transition-all duration-300 text-lg shadow-sm"
-          required
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Brainchain</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+        <link
+          href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+          rel="stylesheet"
         />
-        <button
-          type="submit"
-          class="mt-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-10 py-4 rounded-xl transform hover:scale-105 hover:shadow-lg transition-all duration-300 text-lg font-semibold w-full"
-        >
-          Analyze Project
-        </button>
-      </form>
-    </div>
-
-    <!-- Chat Widget -->
-    <div
-      id="chat-widget"
-      class="fixed bottom-5 right-5 w-80 bg-white rounded-lg shadow-2xl transition-all duration-300 ease-in-out"
-    >
-      <!-- Chat Header -->
-      <div
-        id="chat-toggle"
-        class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-t-lg cursor-pointer flex justify-between items-center"
-      >
-        <span class="font-semibold">Environmental Chat</span>
-        <span id="chat-toggle-icon">▼</span>
-      </div>
-      <!-- Chat Body (Hidden by Default) -->
-      <div id="chat-body" class="hidden">
-        <div id="chat-select" class="p-2">
-          <select
-            id="room-select"
-            class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 transition-all duration-300"
-          >
-            <option value="public">Public Chat</option>
-          </select>
+        <!-- Animate.css for animations -->
+        <link
+          rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+        />
+        <!-- Socket.IO client library -->
+        <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+      </head>
+      
+      <body>
+        <div class="video-background">
+          <video autoplay muted loop>
+              <source src="{{ url_for('static', filename='assets/jelly fish bg 480p 2 2.mp4') }}" type="video/mp4">
+          </video>
         </div>
+
+        <header class="header">
+          <div class="header-content">
+            <div class="header-left">
+              <h3>Brainchain</h3>
+            </div>
+            <div class="header-mid">
+              <p>About</p>
+              <p>Features</p>
+              <p>Media</p>
+              <p>blog</p>
+            </div>
+            <div class="header-right">
+              <img src="{{ url_for('static', filename='assets/search.png') }}" alt="search">
+            </div>
+          </div>
+        </header>
+
+        <div class="logout-btn">
+          <button id="redirectButton"><img src="{{ url_for('static', filename='assets/logout.png') }}" alt="logout">
+            <a href="http://localhost:5000/"></a>
+          </button>
+        </div>
+
+        <div class="body">
+          <div class="section1">
+            <h1>Connect. Learn. Contribute</h1>
+            <p>Welcome To The One Stop Solution For All Your Project Requirements</p>
+          </div>
+
+          <div class="section2">
+            <div class="card side-card">
+              <h2>Person Search</h2>
+              <img src="{{ url_for('static', filename='assets/businessman.png') }}" alt="logo">
+              <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Sed eos dolorem.</p>
+              <button onclick="showGetContact()">Try Out</button>
+            </div>
+            <div class="card mid-card">
+              <h2>Project Help</h2>
+              <img src="{{ url_for('static', filename='assets/project.png') }}" alt="logo">
+              <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Sed eos dolorem. Sed eos dolorem.</p>
+              <button onclick="showProjectHelpPopup()">Try Out</button>
+            </div>
+            <div class="card side-card">
+              <h2>Profession Search</h2>
+              <img src="{{ url_for('static', filename='assets/worker.png') }}" alt="logo">
+              <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Sed eos dolorem.</p>
+              <button onclick="showGetProfession()">Try Out</button>
+            </div>
+          </div>
+        </div>   
+
+        <!-- Get Contact popup -->
+        <div class="popup" id="getContact">
+          <div class="project-help-popup">
+            <img src="{{ url_for('static', filename='assets/close.png') }}" alt="close" onclick="hideGetContact()">
+            <h2>Person Search</h2>
+            <form id="getContactForm">
+              <input type="text" name="name" id="personName" placeholder="Enter Start Name..." required/>
+              <input type="text" name="targetperson" id="targetperson" placeholder="Enter Target Name..." required/>
+              <button type="submit" id="getContactBtn">Get Contact</button>
+            </form>
+            <div id="getContactResult"></div>
+          </div>
+        </div>
+
+        <!-- Get Profession popup -->
+        <div class="popup" id="getProfession">
+          <div class="project-help-popup">
+            <img src="{{ url_for('static', filename='assets/close.png') }}" alt="close" onclick="hideGetProfession()">
+            <h2>Profession Search</h2>
+            <form id="getProfessionForm">
+              <input type="text" name="name" id="personNameforprofession" placeholder="Enter Start Name..." required/>
+              <input type="text" name="profession" id="profession"  placeholder="Enter profession..." required/>
+              <button type="submit" id="getProfessionBtn">Get Profession</button>
+            </form>
+            <div id="getProfessionResult"></div>
+          </div>
+        </div>
+
+        <!-- Main Content (unchanged) -->
+        <div class="popup" id="popup">
+          <div class="project-help-popup">
+            <img src="{{ url_for('static', filename='assets/close.png') }}" alt="close" onclick="hideProjectHelpPopup()">
+            <h2>Project Analysis Hub</h2>
+            <form action="/analyze" method="post">
+              <input type="text" name="prompt" placeholder="Enter your project prompt..." required/>
+              <button type="submit" onclick="showLoading()">Analyze Project</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Chat Widget -->
         <div
-          id="chat-messages"
-          class="h-64 overflow-y-auto p-4 bg-gray-50 border-b border-gray-200 text-sm"
-        ></div>
-        <div class="p-4">
-          <input
-            type="text"
-            id="chat-input"
-            placeholder="Type a message..."
-            class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
-            disabled
-          />
-          <button
-            id="chat-send"
-            class="mt-2 w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all duration-300 font-semibold"
-            disabled
-          >
-            Send
-          </button>
-          <button
-            id="change-name"
-            class="mt-2 w-full bg-gradient-to-r from-gray-500 to-gray-600 text-white px-4 py-1 rounded-lg hover:bg-gray-700 transition-all duration-300 text-sm"
-          >
-            Change Name
-          </button>
-        </div>
-        <div id="online-users" class="p-2">
-          <h3 class="font-semibold text-sm">Online Users</h3>
-          <ul id="user-list" class="list-disc pl-5 text-sm"></ul>
-        </div>
-      </div>
-    </div>
-
-    <!-- Name Input Modal -->
-    <div
-      id="name-modal"
-      class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center hidden"
-    >
-      <div
-        class="bg-white p-6 rounded-lg shadow-xl w-96 animate__animated animate__zoomIn"
-      >
-        <h2 class="text-xl font-semibold mb-4">Enter Your Chat Name</h2>
-        <input
-          type="text"
-          id="name-input"
-          placeholder="Your name..."
-          class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-300"
-        />
-        <button
-          id="name-submit"
-          class="mt-4 w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all duration-300 font-semibold"
+          id="chat-widget"
+          class="fixed bottom-5 right-5 w-80 bg-white bg-opacity-25 rounded-lg shadow-2xl transition-all duration-300 ease-in-out"
         >
-          Join Chat
+          <!-- Chat Header -->
+          <div
+            id="chat-toggle"
+            class="bg-gray-500 bg-opacity-25 p-2 rounded-t-lg cursor-pointer flex justify-between items-center"
+          >
+            <span class="font-semibold">Environmental Chat</span>
+            <span id="chat-toggle-icon">▲</span>
+          </div>
+          <!-- Chat Body (Hidden by Default) -->
+          <div id="chat-body" class="hidden">
+            <div id="chat-select" class="p-2 text-black bg-gray-500">
+              <select
+                id="room-select"
+                class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 transition-all duration-300"
+              >
+                <option value="public" class="text-black">Public Chat</option>
+              </select>
+            </div>
+            <div
+              id="chat-messages"
+              class="h-64 overflow-y-auto p-4 bg-gray-50 border-b border-gray-200 text-sm text-black"
+            ></div>
+            <div class="p-4 bg-gray-500">
+              <input
+                type="text"
+                id="chat-input"
+                placeholder="Type a message..."
+                class="w-full p-2 text-black border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+                disabled
+              />
+              <button
+                id="chat-send"
+                class="mt-2 w-full text-white px-4 py-2 rounded-lg transition-all duration-300 font-semibold"
+                disabled
+              >
+                Send
+              </button>
+              <button
+                id="change-name"
+                class="mt-2 w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-all duration-300 text-sm"
+              >
+                Change Name
+              </button>
+            </div>
+            <div id="online-users" class="p-2">
+              <h3 class="font-semibold text-sm">Online Users</h3>
+              <ul id="user-list" class="list-disc pl-5 text-sm"></ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Name Input Modal -->
+        <div
+          id="name-modal"
+          class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center hidden"
+        >
+          <div
+            class="bg-white p-6 rounded-lg shadow-xl w-96 animate__animated animate__zoomIn"
+          >
+            <h2 class="text-xl font-semibold mb-4">Enter Your Chat Name</h2>
+            <input
+              type="text"
+              id="name-input"
+              placeholder="Your name..."
+              class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-300"
+            />
+            <button
+              id="name-submit"
+              class="mt-4 w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all duration-300 font-semibold"
+            >
+              Join Chat
+            </button>
+          </div>
+        </div>
+
+        <!-- Show Requests Button -->
+        <button class="notification" id="showRequestsBtn" onclick="showRequestsModal()">
+          <img src="{{ url_for('static', filename='assets/notification.png') }}" alt="notification">
+          <!-- <div id="n_requests"></div> -->
         </button>
-      </div>
-    </div>
 
-    <!-- JavaScript for Chat Functionality -->
-    <script>
-      const socket = io();
-      let username = localStorage.getItem("chatUsername");
-      let currentRoom = "public";
-      const messages = { public: [] };
-      const privateChats = {}; // partner: room
+        <!-- Requests Popup Modal -->
+        <div class="popup2" id="requestsModal">
+          <div class="viewRequests">
+              <img src="{{ url_for('static', filename='assets/close.png') }}" alt="close" onclick="closeRequestsModal()"> 
+              <h2>Notifications</h2>
+              <div id="requestsContainer">
+                  <p>Fetching requests...</p>
+              </div>
+              <!-- <button onclick="closeRequestsModal()">Close</button> -->
+          </div>
+        </div>
 
-      socket.on("connect", () => {
-        console.log("Connected to chat server");
-        if (username) {
-          socket.emit("join", { username: username });
-          document.getElementById("chat-input").disabled = false;
-          document.getElementById("chat-send").disabled = false;
-        }
-      });
+        <!-- Response Popup for Accepting Request -->
+        <div id="responseModal" class="popup">
+          <div class="acceptRequest">
+              <h2>Confirm Your Availability</h2>
+              <input type="number" id="hoursPerWeek" placeholder="Hours per week">
+              <textarea id="responseMessage" placeholder="Your response message"></textarea>
+              <div>
+                  <button onclick="submitAcceptance()">Submit</button>
+                  <button onclick="closeResponseModal()">Cancel</button>
+              </div>
+          </div>
+        </div>
 
-      socket.on("online_users", (users) => {
-        const userList = document.getElementById("user-list");
-        userList.innerHTML = "";
-        users.forEach((user) => {
-          if (user !== username) {
-            const li = document.createElement("li");
-            li.textContent = user;
-            const button = document.createElement("button");
-            button.textContent = "Chat";
-            button.classList.add("ml-2", "text-blue-500", "hover:underline");
-            button.addEventListener("click", () => {
-              socket.emit("request_private_chat", { target: user });
-              console.log(`Requested private chat with ${user}`);
+        <div class="popup" id="loading">
+          <img src="{{ url_for('static', filename='assets/loading.gif') }}" alt="loading" width="100">
+        </div>
+
+        <!-- JavaScript for Chat Functionality -->
+        <script>
+          const socket = io();
+          let username = localStorage.getItem("chatUsername");
+          let currentRoom = "public";
+          const messages = { public: [] };
+          const privateChats = {};
+
+          let selectedRequestId = null; 
+
+          fetchRequests();
+          hideGetContact();
+          hideGetProfession();
+          hideProjectHelpPopup();
+          
+          document.getElementById("loading").classList.add("hidden");
+          document.getElementById("responseModal").classList.add("hidden");
+          document.getElementById("requestsModal").classList.add("hidden");
+          
+          function showLoading() {
+            document.getElementById("loading").classList.remove("hidden");
+          }
+
+          function showGetContact() {
+            document.getElementById("getContact").classList.remove("hidden");
+          }
+
+          function hideGetContact() {
+            document.getElementById("getContact").classList.add("hidden");
+          }
+
+          function showGetProfession() {
+            document.getElementById("getProfession").classList.remove("hidden");
+          }
+
+          function hideGetProfession() {
+            document.getElementById("getProfession").classList.add("hidden");
+          }
+
+          function hideProjectHelpPopup() {
+              document.getElementById("popup").classList.add("hidden");
+              fetchRequests();
+          }
+
+          function showProjectHelpPopup() {
+              document.getElementById("popup").classList.remove("hidden");
+              fetchRequests();
+          }
+
+          function showRequestsModal() {
+              document.getElementById("requestsModal").classList.remove("hidden");
+              fetchRequests();
+          }
+
+          function closeRequestsModal() {
+              document.getElementById("requestsModal").classList.add("hidden");
+          }
+
+          function closeResponseModal() {
+              document.getElementById("responseModal").classList.add("hidden");
+          }
+
+          function performGetProfessionSearch() {
+              var startPerson = document.getElementById('personNameforprofession').value.trim();
+              var target = document.getElementById('profession').value.trim();        
+
+              fetch(`/searchprofession/${startPerson}/${target}`, {
+              })
+              .then(response => response.json())
+              .then(data => {
+                console.log(data);
+                
+                const resultDiv = document.getElementById("getProfessionResult");
+                resultDiv.innerHTML = "";
+
+                if (data.path) {
+                  const names = data.path.split(" -> ");
+                  let index = 0;
+
+                  function showNext() {
+                    if (index < names.length) {
+                      const wrapper = document.createElement("div");
+                      wrapper.classList.add("flex", "items-center", "space-x-2", "justify-center", "mb-1", "custom-y");
+
+                      const node = document.createElement("div");
+                      node.textContent = names[index];
+                      node.classList.add(
+                        "w-28", "h-28", "flex", "items-center", "justify-center", "p-1", "ml-1",
+                        "rounded-full", "custom-gradient", "text-white", "text-sm",
+                        "font-bold", "shadow-lg", "opacity-0", "transition-opacity", "duration-500", "text-center"
+                      );
+
+                      wrapper.appendChild(node);
+
+                      if (index < names.length - 1) {
+                        const nodewrapper = document.createElement("div");
+                        nodewrapper.classList.add("custom-x");
+                        const arrow = document.createElement("img");
+                        arrow.src = "https://cdn-icons-png.flaticon.com/512/271/271228.png";
+                        arrow.classList.add("w-6", "h-6", "opacity-75" );
+
+                        nodewrapper.appendChild(arrow);
+                        wrapper.appendChild(nodewrapper);
+                      }
+
+                      resultDiv.appendChild(wrapper);
+
+                      setTimeout(() => {
+                        node.classList.remove("opacity-0");
+                      }, 100);
+
+                      index++;
+                      setTimeout(showNext, 700);
+                    }
+                  }
+
+                  showNext();
+                } else {
+                  resultDiv.innerHTML = `<p class='text-red-600'>${data.error}</p>`;
+                }
+              })
+              .catch(error => {
+                resultDiv.innerHTML = "<p class='text-red-600'>Error fetching connection.</p>";
+              });
+          }
+          
+          function performGetContactSearch() {
+              var startPerson = document.getElementById('personName').value.trim();
+              var expertName = document.getElementById('targetperson').value.trim();        
+
+              fetch(`/searchperson/${startPerson}/${expertName}`, {
+              })
+              .then(response => response.json())
+              .then(data => {
+                console.log(data);
+                
+                const resultDiv = document.getElementById("getContactResult");
+                resultDiv.innerHTML = "";
+
+                if (data.path) {
+                  const names = data.path.split(" -> ");
+                  let index = 0;
+
+                  function showNext() {
+                    if (index < names.length) {
+                      const wrapper = document.createElement("div");
+                      wrapper.classList.add("flex", "items-center", "space-x-2", "justify-center", "mb-1");
+
+                      const node = document.createElement("div");
+                      node.textContent = names[index];
+                      node.classList.add(
+                        "w-28", "h-28", "flex", "items-center", "justify-center", "p-1", "ml-1",
+                        "rounded-full", "custom-gradient", "text-white", "text-sm",
+                        "font-bold", "shadow-lg", "opacity-0", "transition-opacity", "duration-500", "text-center"
+                      );
+
+                      wrapper.appendChild(node);
+
+                      if (index < names.length - 1) {
+                        const nodewrapper = document.createElement("div");
+                        nodewrapper.classList.add("custom-x");
+                        const arrow = document.createElement("img");
+                        arrow.src = "https://cdn-icons-png.flaticon.com/512/271/271228.png";
+                        arrow.classList.add("w-6", "h-6", "opacity-75" );
+
+                        nodewrapper.appendChild(arrow);
+                        wrapper.appendChild(nodewrapper);
+                      }
+
+                      resultDiv.appendChild(wrapper);
+
+                      setTimeout(() => {
+                        node.classList.remove("opacity-0");
+                      }, 100);
+
+                      index++;
+                      setTimeout(showNext, 700);
+                    }
+                  }
+
+                  showNext();
+                } else {
+                  resultDiv.innerHTML = `<p class='text-red-600'>${data.error}</p>`;
+                }
+              })
+              .catch(error => {
+                resultDiv.innerHTML = "<p class='text-red-600'>Error fetching connection.</p>";
+              });
+            }
+
+          function fetchRequests() {
+            const userName = localStorage.getItem("userName");
+            let n_requests = 0;
+
+            fetch(`/get_requests/${userName}`)
+            .then(response => response.json())
+            .then(data => {
+                let container = document.getElementById("requestsContainer");
+                container.innerHTML = "";
+
+                if (data.length === 0) {
+                    container.innerHTML = "<p class='text-center text-gray-500' style='margin: 20px;'>No requests found.</p>";
+                    return;
+                }
+
+                // if(data.length > 0){
+                //   let x = document.getElementById("n_requests");
+                //   x.innerHTML= data.length;
+                // }
+                // else{
+                //   let x = document.getElementById("n_requests");
+                //   x.innerHTML= 0;
+                // }
+                
+                data.forEach(request => {
+                    let card = document.createElement("div");
+                    card.className = "request-card";
+                    card.innerHTML = `
+                        <h3><strong>Project Title: </strong>${request.project_title}</h3>
+                        <p><strong>Project Description: </strong>${request.project_description}</p>
+                        <p>From: ${request.from}</p>
+                        <div class="request-card-btns">
+                            <button onclick="showResponseModal('${request._id}')">Accept</button>
+                            <button onclick="updateRequestStatus('${request._id}', 'rejected')">Reject</button>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            })
+            .catch(error => {
+                document.getElementById("requestsContainer").innerHTML = "<p class='text-center text-red-500'>Error fetching requests.</p>";
+                console.error("Error fetching requests:", error);
             });
-            li.appendChild(button);
-            userList.appendChild(li);
+
+
+            fetch(`/get_responses/${userName}`)
+            .then(response => response.json())
+            .then(data => {
+                let container = document.getElementById("requestsContainer");
+
+                // if(data.length > 0){
+                //   let x = document.getElementById("n_requests");
+                //   let y = parseInt(document.getElementById("n_requests").innerText, 10);
+                //   x.innerHTML= y + data.length;
+                // }
+                // else{
+                //   document.getElementById("n_requests").classList.add("hidden");
+                // }
+
+                data.forEach(request => {
+                    let card = document.createElement("div");
+                    card.className = "request-card";
+                    card.innerHTML = `
+                        <h3><strong>Project Title: </strong>${request.project_title}</h3>
+                        <p><strong>Project Description: </strong>${request.project_description}</p>
+                        <p>From: ${request.to}</p>
+                        <p>Status: ${request.status}</p>
+                        <p>Availability: ${request.hours_per_week} hours per week</p>
+                        <p>Message: ${request.response_message}</p>
+                    `;
+                    container.appendChild(card);
+                });
+            })
+            .catch(error => {
+                document.getElementById("requestsContainer").innerHTML = "<p class='text-center text-red-500'>Error fetching requests.</p>";
+                console.error("Error fetching requests:", error);
+            });
+
+            // let x = document.getElementById("n_requests");
+            // x.innerHTML= n_requests;
           }
-        });
-        console.log("Online users updated:", users);
-      });
 
-      socket.on("private_chat_request", (data) => {
-        const requester = data.from;
-        const to = data.to;
-        if (to === username) {
-          if (confirm(`Accept private chat request from ${requester}?`)) {
-            socket.emit("accept_private_chat", { requester: requester });
-            console.log(`Accepted private chat with ${requester}`);
-          } else {
-            console.log(`Declined private chat with ${requester}`);
+          function showResponseModal(requestId) {
+              console.log("Selected Request ID:", requestId); // Debugging
+              selectedRequestId = requestId;
+              document.getElementById("responseModal").classList.remove("hidden");
           }
-        }
-      });
 
-      socket.on("private_chat_started", (data) => {
-        const room = data.room;
-        const partner = data.partner;
-        privateChats[partner] = room;
-        if (!messages[room]) messages[room] = [];
-        const select = document.getElementById("room-select");
-        const option = document.createElement("option");
-        option.value = room;
-        option.textContent = `Private with ${partner}`;
-        select.appendChild(option);
-        select.value = room; // Auto-switch to the private room
-        currentRoom = room;
-        displayMessages();
-        console.log(`Private chat started with ${partner} in room ${room}`);
-      });
+          function submitAcceptance() {
+              const hours = document.getElementById("hoursPerWeek").value;
+              const message = document.getElementById("responseMessage").value;
 
-      socket.on("chat_message", (data) => {
-        const room = data.room;
-        const message = data.message;
-        if (!messages[room]) messages[room] = [];
-        messages[room].push(message);
-        if (room === currentRoom) {
-          displayMessages();
-        }
-        console.log(`Received message in room ${room}: ${message}`);
-      });
+              if (!hours || !message) {
+                  alert("Please fill in all fields.");
+                  return;
+              }
 
-      document.getElementById("room-select").addEventListener("change", (e) => {
-        currentRoom = e.target.value;
-        displayMessages();
-        console.log(`Switched to room ${currentRoom}`);
-      });
+              if (!selectedRequestId) {
+                  alert("Error: No request selected!");
+                  return;
+              }
 
-      function displayMessages() {
-        const chatMessages = document.getElementById("chat-messages");
-        chatMessages.innerHTML = "";
-        if (messages[currentRoom]) {
-          messages[currentRoom].forEach((msg) => {
-            const div = document.createElement("div");
-            div.classList.add(
-              "mb-2",
-              "p-2",
-              "bg-blue-100",
-              "rounded-lg",
-              "animate__animated",
-              "animate__fadeInUp"
-            );
-            div.textContent = msg;
-            chatMessages.appendChild(div);
+              const requestData = {
+                  request_id: selectedRequestId, // ✅ Correctly set request ID
+                  status: "accepted",
+                  hours_per_week: parseInt(hours),
+                  response_message: message
+              };
+
+              console.log("Sending request data:", requestData); // Debugging
+
+              fetch("/update_request", {  // Ensure correct port
+                  method: "POST",
+                  headers: {
+                      "Content-Type": "application/json"
+                  },
+                  body: JSON.stringify(requestData)
+              })
+              .then(response => response.json())
+              .then(data => {
+                  console.log("Server response:", data); // Debugging
+                  if (data.error) {
+                      alert("Error: " + data.error);
+                  } else {
+                      alert(data.message);
+                      closeResponseModal();
+                      // closeRequestsModal();
+                      fetchRequests(); // Refresh request list
+                  }
+              })
+              .catch(error => console.error("Error updating request:", error));
+          }
+
+          function updateRequestStatus(requestId, status) {
+              fetch("/update_request", {
+                  method: "POST",
+                  headers: {
+                      "Content-Type": "application/json"
+                  },
+                  body: JSON.stringify({
+                      request_id: requestId,  // Ensure request_id is passed correctly
+                      status: status
+                  })
+              })
+              .then(response => response.json())
+              .then(data => {
+                  if (data.error) {
+                      console.error("Error updating request:", data.error);
+                      alert("Error: " + data.error);
+                  } else {
+                      alert(data.message);
+                      fetchRequests(); // Refresh requests list
+                  }
+              })
+              .catch(error => console.error("Error updating request:", error));
+          }
+
+          socket.on("connect", () => {
+            console.log("Connected to chat server");
+            if (username) {
+              socket.emit("join", { username: username });
+              document.getElementById("chat-input").disabled = false;
+              document.getElementById("chat-send").disabled = false;
+            }
           });
-          chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-      }
 
-      document.getElementById("chat-send").addEventListener("click", () => {
-        const input = document.getElementById("chat-input");
-        const message = input.value.trim();
-        if (message && username) {
-          socket.emit("send_message", { room: currentRoom, message: message });
-          input.value = "";
-          console.log(`Sent message to ${currentRoom}: ${message}`);
-        }
-      });
+          socket.on("online_users", (users) => {
+            const userList = document.getElementById("user-list");
+            userList.innerHTML = "";
+            users.forEach((user) => {
+              if (user !== username) {
+                const li = document.createElement("li");
+                li.textContent = user;
+                const button = document.createElement("button");
+                button.textContent = "Chat";
+                button.classList.add("ml-2", "text-blue-500", "hover:underline");
+                button.addEventListener("click", () => {
+                  socket.emit("request_private_chat", { target: user });
+                  console.log(`Requested private chat with ${user}`);
+                });
+                li.appendChild(button);
+                userList.appendChild(li);
+              }
+            });
+            console.log("Online users updated:", users);
+          });
 
-      document
-        .getElementById("chat-input")
-        .addEventListener("keypress", (e) => {
-          if (e.key === "Enter") {
-            document.getElementById("chat-send").click();
+          socket.on("private_chat_request", (data) => {
+            const requester = data.from;
+            const to = data.to;
+            if (to === username) {
+              if (confirm(`Accept private chat request from ${requester}?`)) {
+                socket.emit("accept_private_chat", { requester: requester });
+                console.log(`Accepted private chat with ${requester}`);
+              } else {
+                console.log(`Declined private chat with ${requester}`);
+              }
+            }
+          });
+
+          socket.on("private_chat_started", (data) => {
+            const room = data.room;
+            const partner = data.partner;
+            privateChats[partner] = room;
+            if (!messages[room]) messages[room] = [];
+            const select = document.getElementById("room-select");
+            const option = document.createElement("option");
+            option.value = room;
+            option.textContent = `Private with ${partner}`;
+            select.appendChild(option);
+            select.value = room; // Auto-switch to the private room
+            currentRoom = room;
+            displayMessages();
+            console.log(`Private chat started with ${partner} in room ${room}`);
+          });
+
+          socket.on("chat_message", (data) => {
+            const room = data.room;
+            const message = data.message;
+            if (!messages[room]) messages[room] = [];
+            messages[room].push(message);
+            if (room === currentRoom) {
+              displayMessages();
+            }
+            console.log(`Received message in room ${room}: ${message}`);
+          });
+
+          document.getElementById("room-select").addEventListener("change", (e) => {
+            currentRoom = e.target.value;
+            displayMessages();
+            console.log(`Switched to room ${currentRoom}`);
+          });
+
+          function displayMessages() {
+            const chatMessages = document.getElementById("chat-messages");
+            chatMessages.innerHTML = "";
+            if (messages[currentRoom]) {
+              messages[currentRoom].forEach((msg) => {
+                const div = document.createElement("div");
+                div.classList.add(
+                  "mb-2",
+                  "p-2",
+                  "bg-blue-100",
+                  "rounded-lg",
+                  "animate__animated",
+                  "animate__fadeInUp"
+                );
+                div.textContent = msg;
+                chatMessages.appendChild(div);
+              });
+              chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
           }
-        });
 
-      document.getElementById("chat-toggle").addEventListener("click", () => {
-        const chatBody = document.getElementById("chat-body");
-        const toggleIcon = document.getElementById("chat-toggle-icon");
-        const nameModal = document.getElementById("name-modal");
+          document.getElementById("chat-send").addEventListener("click", () => {
+            const input = document.getElementById("chat-input");
+            const message = input.value.trim();
+            if (message && username) {
+              socket.emit("send_message", { room: currentRoom, message: message });
+              input.value = "";
+              console.log(`Sent message to ${currentRoom}: ${message}`);
+            }
+          });
 
-        chatBody.classList.toggle("hidden");
-        if (!chatBody.classList.contains("hidden")) {
-          chatBody.classList.add("animate__animated", "animate__slideInUp");
-          toggleIcon.textContent = "▲";
-          if (!username) {
-            nameModal.classList.remove("hidden");
-          }
-        } else {
-          chatBody.classList.remove("animate__animated", "animate__slideInUp");
-          toggleIcon.textContent = "▼";
-        }
-      });
+          document
+            .getElementById("chat-input")
+            .addEventListener("keypress", (e) => {
+              if (e.key === "Enter") {
+                document.getElementById("chat-send").click();
+              }
+            });
 
-      document.getElementById("name-submit").addEventListener("click", () => {
-        const nameInput = document.getElementById("name-input");
-        username = nameInput.value.trim();
-        if (username) {
-          localStorage.setItem("chatUsername", username);
-          document.getElementById("name-modal").classList.add("hidden");
-          document.getElementById("chat-input").disabled = false;
-          document.getElementById("chat-send").disabled = false;
-          socket.emit("join", { username: username });
-          console.log(`Joined chat as ${username}`);
-        } else {
-          alert("Please enter a valid name!");
-        }
-      });
+          document.getElementById("chat-toggle").addEventListener("click", () => {
+            const chatBody = document.getElementById("chat-body");
+            const toggleIcon = document.getElementById("chat-toggle-icon");
+            const nameModal = document.getElementById("name-modal");
 
-      document
-        .getElementById("name-input")
-        .addEventListener("keypress", (e) => {
-          if (e.key === "Enter") {
-            document.getElementById("name-submit").click();
-          }
-        });
+            chatBody.classList.toggle("hidden");
+            if (!chatBody.classList.contains("hidden")) {
+              chatBody.classList.add("animate__animated", "animate__slideInUp");
+              toggleIcon.textContent = "▼";
+              if (!username) {
+                nameModal.classList.remove("hidden");
+              }
+            } else {
+              chatBody.classList.remove("animate__animated", "animate__slideInUp");
+              toggleIcon.textContent = "▲";
+            }
+          });
 
-      document.getElementById("change-name").addEventListener("click", () => {
-        document.getElementById("name-modal").classList.remove("hidden");
-        document.getElementById("name-input").value = username;
-      });
-    </script>
-  </body>
-</html>
+          document.getElementById("name-submit").addEventListener("click", () => {
+            const nameInput = document.getElementById("name-input");
+            username = nameInput.value.trim();
+            if (username) {
+              localStorage.setItem("chatUsername", username);
+              document.getElementById("name-modal").classList.add("hidden");
+              document.getElementById("chat-input").disabled = false;
+              document.getElementById("chat-send").disabled = false;
+              socket.emit("join", { username: username });
+              console.log(`Joined chat as ${username}`);
+            } else {
+              alert("Please enter a valid name!");
+            }
+          });
+
+          document
+            .getElementById("name-input")
+            .addEventListener("keypress", (e) => {
+              if (e.key === "Enter") {
+                document.getElementById("name-submit").click();
+              }
+            });
+
+          document.getElementById("change-name").addEventListener("click", () => {
+            document.getElementById("name-modal").classList.remove("hidden");
+            document.getElementById("name-input").value = username;
+          });
+        
+          document.getElementById('getContactForm').addEventListener('submit', function(event) {
+              event.preventDefault();  // Prevents the form submission, thus avoiding page reload
+              performGetContactSearch();  // Call your search function
+          });
+
+          document.getElementById('getProfessionForm').addEventListener('submit', function(event) {
+              event.preventDefault();  // Prevents the form submission, thus avoiding page reload
+              performGetProfessionSearch();  // Call your search function
+          });
+          
+          // function handleLogout(event) {
+          //   event.preventDefault();
+          //   localStorage.clear();
+          //   console.log("Localstorage cleared");
+          // }
+
+          document.getElementById("redirectButton").addEventListener("click", function() {
+            event.preventDefault();
+            localStorage.clear();
+            window.location.href = "http://127.0.0.1:5000/";
+          });
+        </script>
+      </body>
+    </html>

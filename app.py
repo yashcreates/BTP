@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify, redirect, url_for
 from flask_socketio import SocketIO, emit, join_room
 import requests
 import os
@@ -10,14 +10,38 @@ import torch
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 from serpapi import GoogleSearch
 from dotenv import load_dotenv
+from collections import deque
+from pymongo import MongoClient
+from bson import ObjectId
+from flask_cors import CORS
+from flask_mail import Mail, Message
 
 # Load environment variables
 load_dotenv()
 
 # Initialize Flask app with SocketIO
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key_here'  # Replace with a secure key
+app = Flask(__name__, static_folder='static')
+app.config['SECRET_KEY'] = 'your_secret_key_here'
 socketio = SocketIO(app, cors_allowed_origins="*")
+
+CORS(app)
+
+# Configure Flask-Mail
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587  # For TLS
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
+app.config['MAIL_USERNAME'] = 'shan.tanu.rank@gmail.com'  # Your email address
+app.config['MAIL_PASSWORD'] = 'qgjqqxhtcfbqnmjw'  # Your email password
+app.config['MAIL_DEFAULT_SENDER'] = 'shan.tanu.rank@gmail.com'
+
+# Initialize the Mail object
+mail = Mail(app)
+
+# Connect to MongoDB
+client = MongoClient("mongodb+srv://shantanurankhambe:rkKLvTaAf4USzeL9@cluster0.wg78u.mongodb.net/")
+db = client["BTP"]
+collection = db["Requests"]
 
 # Load AI models (unchanged)
 sbert_model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
@@ -156,6 +180,10 @@ def process_input(prompt):
 # Flask routes (unchanged)
 @app.route('/')
 def home():
+    return render_template('login.html')
+
+@app.route('/index')
+def index():
     return render_template('index.html')
 
 @app.route('/analyze', methods=['POST'])
@@ -222,6 +250,232 @@ def handle_send_message(data):
         print(f"Message '{formatted_message}' sent to room {room}")
     else:
         print(f"Failed to send message: User {username} or message {message} invalid")
+
+#===============================================================================================================
+
+# SSR
+
+# Load the adjacency list
+def load_adjacency_list(file_path):
+    try:
+        with open(file_path, 'r') as f:
+            adjacency_list = json.load(f)  # Ensure your file is JSON-formatted
+        return adjacency_list
+    except Exception as e:
+        print(f"Error loading adjacency list: {e}")
+        return {}
+
+ADJACENCY_LIST_FILE = './adjacency_list_with_profession.json'
+adjacency_list = load_adjacency_list(ADJACENCY_LIST_FILE)
+file_path = './data.xlsx'
+profession_data = pd.read_excel(file_path)
+name_to_profession = dict(zip(profession_data['LinkedIn Name'], profession_data['Description']))
+
+# Perform BFS search for person
+def bfs_with_person(start, target):
+    queue = deque([(start, [start])])
+    visited = set()
+    visited.add(start)
+
+    while queue:
+        current, path = queue.popleft()
+
+        # Check if the person matches
+        if current.strip().lower() == target.strip().lower():
+            return path
+
+        for neighbor, _ in adjacency_list.get(current, []):
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append((neighbor, path + [neighbor]))
+
+    return None
+
+# Perform BFS search for profession
+def bfs_with_profession(start, profession):
+    queue = deque([(start, [start])])
+    visited = set()
+    visited.add(start)
+
+    while queue:
+        current, path = queue.popleft()
+
+        if name_to_profession.get(current, '') == profession:
+            return path
+
+        for neighbor, _ in adjacency_list.get(current, []):
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append((neighbor, path + [neighbor]))
+
+    return None
+
+@app.route('/searchprofession/<string:start>/<string:target>', methods=['GET'])
+def searchprofession(start, target):
+
+    if not start:
+        return jsonify({"error": "Start name is required"}), 400
+
+    if target:
+        result = bfs_with_profession(start, target)
+        if result:
+            return jsonify({"path": " -> ".join(result)})
+        else:
+            return jsonify({"error": "No connection found"}), 404
+
+    return jsonify({"error": "No valid target or profession provided"}), 400
+
+@app.route('/searchperson/<string:start>/<string:target>', methods=['GET'])
+def searchperson(start, target):
+
+    if not start:
+        return jsonify({"error": "Start name is required"}), 400
+
+    if target:
+        result = bfs_with_person(start, target)
+        if result:
+            return jsonify({"path": " -> ".join(result)})
+        else:
+            return jsonify({"error": "No connection found"}), 404
+
+    return jsonify({"error": "No valid target or profession provided"}), 400
+
+@app.route('/search', methods=['POST'])
+def search():
+    data = request.get_json()
+    start = data.get('start')
+    target = data.get('target')
+    profession = data.get('profession')
+
+    if not start:
+        return jsonify({"error": "Start name is required"}), 400
+
+    # Search by person
+    if target:
+        result = bfs_with_person(start, target)
+        if result:
+            return jsonify({"path": " -> ".join(result)})
+        else:
+            return jsonify({"error": "No connection found"}), 404
+
+    # Search by profession
+    if profession:
+        result = bfs_with_profession(start, profession)
+        if result:
+            return jsonify({"path": " -> ".join(result)})
+        else:
+            return jsonify({"error": "No connection found for that profession"}), 404
+
+    return jsonify({"error": "No valid target or profession provided"}), 400
+
+# Serve the adjacency list
+@app.route('/adjacency-list', methods=['GET'])
+def get_adjacency_list():
+    return jsonify(adjacency_list)
+
+@app.route('/add')
+def add_data():
+    collection.insert_one({"name": "John", "age": 30})
+    return jsonify(message="User added!")
+
+@app.route('/add_request', methods=['POST'])
+def add_request():
+    data = request.json
+    if not data:
+        return jsonify({"error": "Invalid data"}), 400
+    
+    collection.insert_one({
+        "from": data["from"],
+        "to": data["to"],
+        "project_title": data["project_title"],
+        "project_description": data["project_description"],
+        "status": "pending"
+    })
+    
+    return jsonify({"success": True, "message": "Request added successfully!"})
+
+@app.route('/get_responses/<userName>', methods=['GET'])
+def get_responses(userName):
+    requests = list(collection.find({"from": userName, "status": "accepted"}, {"_id": 1, "from": 1, "to": 1, "project_title": 1, "project_description": 1, "status": 1, "hours_per_week": 1, "response_message": 1}))
+
+    # Convert `_id` to string so JavaScript can use it
+    for req in requests:
+        req["_id"] = str(req["_id"])  # Convert ObjectId to string
+
+    print("Returning Requests:", requests)  # Debugging: Check if `_id` is sent correctly
+    return jsonify(requests)
+
+@app.route('/get_requests/<userName>', methods=['GET'])
+def get_requests(userName):
+    requests = list(collection.find({"to": userName, "status": "pending"}, {"_id": 1, "from": 1, "to": 1, "project_title": 1, "project_description": 1, "status": 1}))
+
+    # Convert `_id` to string so JavaScript can use it
+    for req in requests:
+        req["_id"] = str(req["_id"])  # Convert ObjectId to string
+
+    print("Returning Requests:", requests)  # Debugging: Check if `_id` is sent correctly
+    return jsonify(requests)
+
+
+@app.route('/update_request', methods=['POST'])
+def update_request():
+    try:
+        data = request.get_json(force=True)  # Force JSON parsing
+
+        print("Received Data:", data)  # Debugging output in Flask console
+
+        request_id = data.get("request_id")
+        status = data.get("status")
+
+        if not request_id or not status:
+            return jsonify({"error": "Missing request_id or status"}), 400
+
+        try:
+            obj_id = ObjectId(request_id)
+        except Exception as e:
+            return jsonify({"error": "Invalid ObjectId format"}), 400
+
+        update_data = {"status": status}
+
+        if status == "accepted":
+            userdata = collection.find_one({"_id": obj_id})
+            print("userdata", userdata)
+
+            update_data["hours_per_week"] = int(data.get("hours_per_week", 0))  # Convert to int
+            update_data["response_message"] = data.get("response_message", "")
+
+            recipient_email = userdata["from"]
+            subject = "Update regarding your connection request"
+            body = f"""
+                Your request to {userdata["to"]} got approved.
+                Availability: {int(data.get("hours_per_week", 0))} hours.
+                Message:
+                {data.get("response_message", "")}
+            """
+            msg = Message(subject=subject,
+                        recipients=[recipient_email],
+                        body=body)
+            try:
+                mail.send(msg)
+                # return 'Email sent successfully!'
+            except Exception as e:
+                print("Email not sent")
+                # return f"Failed to send email. Error: {e}"
+
+        result = collection.update_one({"_id": obj_id}, {"$set": update_data})
+
+        if result.matched_count == 0:
+            return jsonify({"error": "Request not found"}), 404
+
+        return jsonify({"success": True, "message": f"Request {status} successfully!"})
+    
+    except Exception as e:
+        print("Error:", str(e))  # Debugging output
+        return jsonify({"error": str(e)}), 500  # Catch unexpected errors
+
+
+
+#===============================================================================================================
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5080, debug=True)
